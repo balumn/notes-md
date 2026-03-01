@@ -43,7 +43,10 @@ import {
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 
 import type { MarkdownEditorCommand, MarkdownEditorHandle } from './MarkdownEditor';
-import { normalizeMarkdownListIndentation } from '../../../domain/markdown';
+import {
+  collapseBlankLinesBetweenListItems,
+  normalizeMarkdownListIndentation,
+} from '../../../domain/markdown';
 
 interface LiveMarkdownEditorProps {
   value: string;
@@ -250,7 +253,10 @@ function runLiveMarkdownCommand(editor: LexicalEditor, command: MarkdownEditorCo
 export const LiveMarkdownEditor = forwardRef<MarkdownEditorHandle, LiveMarkdownEditorProps>(
   function LiveMarkdownEditor({ value, onChange }: LiveMarkdownEditorProps, ref) {
     const lexicalEditorRef = useRef<LexicalEditor | null>(null);
-    const normalizedInitialValue = useMemo(() => normalizeMarkdownListIndentation(value), [value]);
+    const normalizedInitialValue = useMemo(
+      () => collapseBlankLinesBetweenListItems(normalizeMarkdownListIndentation(value)),
+      [value],
+    );
 
     const runCommand = useCallback((command: MarkdownEditorCommand): boolean => {
       const editor = lexicalEditorRef.current;

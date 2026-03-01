@@ -1,6 +1,7 @@
 import { redo, undo } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
-import { type EditorView } from '@codemirror/view';
+import { Prec } from '@codemirror/state';
+import { type EditorView, keymap } from '@codemirror/view';
 import CodeMirror from '@uiw/react-codemirror';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
 
@@ -203,6 +204,39 @@ function insertTable(view: EditorView): boolean {
   );
 }
 
+const STANDALONE_CHECKBOX_LINE_REGEX = /^(\s*)\[([ xX]?)\]\s*(.*)$/;
+const BULLET_CHECKBOX_LINE_REGEX = /^(\s*)(-\s+\[[ xX]\]\s*)(.*)$/;
+
+function insertCheckboxOnEnter(view: EditorView): boolean {
+  const { from } = view.state.selection.main;
+  const line = view.state.doc.lineAt(from);
+  const lineText = line.text;
+
+  const standaloneMatch = STANDALONE_CHECKBOX_LINE_REGEX.exec(lineText);
+  if (standaloneMatch) {
+    const [, indent] = standaloneMatch;
+    const insert = '\n' + indent + '[ ] ';
+    view.dispatch({
+      changes: { from, insert },
+      selection: { anchor: from + insert.length },
+    });
+    return true;
+  }
+
+  const bulletMatch = BULLET_CHECKBOX_LINE_REGEX.exec(lineText);
+  if (bulletMatch) {
+    const [, indent] = bulletMatch;
+    const insert = '\n' + indent + '- [ ] ';
+    view.dispatch({
+      changes: { from, insert },
+      selection: { anchor: from + insert.length },
+    });
+    return true;
+  }
+
+  return false;
+}
+
 function runMarkdownCommand(view: EditorView, command: MarkdownEditorCommand): boolean {
   switch (command) {
     case 'undo':
@@ -227,8 +261,14 @@ function runMarkdownCommand(view: EditorView, command: MarkdownEditorCommand): b
       return applyNumberedList(view);
     case 'blockquote':
       return prefixSelectedLines(view, '> ');
-    case 'checklist':
+    case 'checklist': {
+      const { from, to } = view.state.selection.main;
+      const selected = view.state.sliceDoc(from, to);
+      if (!selected || !selected.trim()) {
+        return replaceSelection(view, '[ ] ', 4);
+      }
       return prefixSelectedLines(view, '- [ ] ');
+    }
     case 'inlineCode':
       return wrapSelection(view, '`');
     case 'codeBlock':
@@ -296,7 +336,20 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     [onChange],
   );
 
-  const extensions = useMemo(() => [markdown()], []);
+  const extensions = useMemo(
+    () => [
+      Prec.highest(
+        keymap.of([
+          {
+            key: 'Enter',
+            run: (view) => insertCheckboxOnEnter(view),
+          },
+        ]),
+      ),
+      markdown(),
+    ],
+    [],
+  );
 
   return (
     <div

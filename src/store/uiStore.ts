@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import type { ViewMode } from '../domain/models';
 
 const VIEW_MODE_STORAGE_KEY = 'notes-md:view-mode';
+const SIDEBAR_OPEN_STORAGE_KEY = 'notes-md:sidebar-open';
 const VALID_VIEW_MODES: ViewMode[] = ['edit', 'preview', 'split', 'live'];
 
 function readPersistedViewMode(): ViewMode | null {
@@ -36,12 +37,38 @@ function persistViewMode(viewMode: ViewMode): void {
 
 const persistedViewMode = readPersistedViewMode();
 
+function readPersistedSidebarOpen(): boolean | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const stored = window.localStorage.getItem(SIDEBAR_OPEN_STORAGE_KEY);
+    if (stored === null) return null;
+    return stored === 'true';
+  } catch {
+    return null;
+  }
+}
+
+function persistSidebarOpen(open: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(SIDEBAR_OPEN_STORAGE_KEY, String(open));
+  } catch {
+    /* ignore */
+  }
+}
+
+const persistedSidebarOpen = readPersistedSidebarOpen();
+
 interface UIState {
   selectedPageId: string | null;
   expandedPageIds: string[];
   viewMode: ViewMode;
   monospaceMode: boolean;
   editorToolbarVisible: boolean;
+  sidebarOpen: boolean;
   hasBootstrappedViewMode: boolean;
   selectPage: (pageId: string | null) => void;
   toggleExpanded: (pageId: string) => void;
@@ -51,6 +78,8 @@ interface UIState {
   bootstrapViewMode: (defaultMode: ViewMode) => void;
   toggleMonospaceMode: () => void;
   toggleEditorToolbar: () => void;
+  toggleSidebar: () => void;
+  setSidebarOpen: (open: boolean) => void;
 }
 
 export const useUiStore = create<UIState>((set) => ({
@@ -59,6 +88,7 @@ export const useUiStore = create<UIState>((set) => ({
   viewMode: persistedViewMode ?? 'split',
   monospaceMode: true,
   editorToolbarVisible: true,
+  sidebarOpen: persistedSidebarOpen ?? true,
   hasBootstrappedViewMode: false,
   selectPage: (pageId) => set({ selectedPageId: pageId }),
   toggleExpanded: (pageId) =>
@@ -101,4 +131,14 @@ export const useUiStore = create<UIState>((set) => ({
     }),
   toggleMonospaceMode: () => set((state) => ({ monospaceMode: !state.monospaceMode })),
   toggleEditorToolbar: () => set((state) => ({ editorToolbarVisible: !state.editorToolbarVisible })),
+  toggleSidebar: () =>
+    set((state) => {
+      const next = !state.sidebarOpen;
+      persistSidebarOpen(next);
+      return { sidebarOpen: next };
+    }),
+  setSidebarOpen: (open) => {
+    persistSidebarOpen(open);
+    set({ sidebarOpen: open });
+  },
 }));

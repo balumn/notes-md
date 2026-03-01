@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 
 import {
+  convertStandaloneCheckboxesForDisplay,
   getLocalImageIdFromSource,
   isLocalImageSource,
   normalizeMarkdownListIndentation,
@@ -14,6 +15,7 @@ import { CodeBlock } from '../renderers/CodeBlock';
 
 interface MarkdownPreviewProps {
   markdown: string;
+  onCheckboxToggle?: (itemIndex: number, checked: boolean) => void;
 }
 
 interface LocalImageProps {
@@ -51,8 +53,13 @@ function LocalImage({ src, alt }: LocalImageProps) {
   return <img src={resolvedSrc} alt={alt ?? ''} loading="lazy" />;
 }
 
-export function MarkdownPreview({ markdown }: MarkdownPreviewProps) {
-  const normalizedMarkdown = useMemo(() => normalizeMarkdownListIndentation(markdown), [markdown]);
+export function MarkdownPreview({ markdown, onCheckboxToggle }: MarkdownPreviewProps) {
+  const displayMarkdown = useMemo(
+    () => convertStandaloneCheckboxesForDisplay(normalizeMarkdownListIndentation(markdown)),
+    [markdown],
+  );
+  const taskListIndexRef = useRef(0);
+  taskListIndexRef.current = 0;
 
   const components = useMemo<Components>(
     () => ({
@@ -75,8 +82,28 @@ export function MarkdownPreview({ markdown }: MarkdownPreviewProps) {
           {children}
         </a>
       ),
+      input: (props) => {
+        const isTaskCheckbox =
+          props.type === 'checkbox' &&
+          String(props.className ?? '').includes('task-list-item-checkbox');
+
+        if (isTaskCheckbox && onCheckboxToggle) {
+          const index = taskListIndexRef.current++;
+          const checked = props.checked ?? false;
+          return (
+            <input
+              {...props}
+              disabled={false}
+              checked={checked}
+              onChange={() => onCheckboxToggle(index, !checked)}
+            />
+          );
+        }
+
+        return <input {...props} />;
+      },
     }),
-    [],
+    [onCheckboxToggle],
   );
 
   return (
@@ -86,7 +113,7 @@ export function MarkdownPreview({ markdown }: MarkdownPreviewProps) {
         rehypePlugins={[rehypeRaw, rehypeHighlight]}
         components={components}
       >
-        {normalizedMarkdown}
+        {displayMarkdown}
       </ReactMarkdown>
     </div>
   );

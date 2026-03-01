@@ -3,6 +3,7 @@ import { type ChangeEvent, type MutableRefObject, useCallback, useEffect, useMem
 import { TopMenuBar, type TopMenuDefinition } from './components/TopMenuBar';
 import { AppShell } from './layout/AppShell';
 import type { Page, PageTreeNode as PageTreeNodeModel, ViewMode } from '../domain/models';
+import { toggleTaskListItem } from '../domain/markdown';
 import {
   MarkdownEditor,
   type MarkdownEditorCommand,
@@ -58,6 +59,16 @@ function SelectedPageEditor({
   const handleToolbarCommand = useCallback((command: MarkdownEditorCommand) => {
     editorHandleRef.current?.runCommand(command);
   }, [editorHandleRef]);
+
+  const handleCheckboxToggle = useCallback(
+    (itemIndex: number, _checked: boolean) => {
+      const updated = toggleTaskListItem(draftContent, itemIndex);
+      if (updated !== null) {
+        setDraftContent(updated);
+      }
+    },
+    [draftContent],
+  );
 
   const openImageUploadPicker = useCallback(() => {
     imageUploadInputRef.current?.click();
@@ -167,7 +178,7 @@ function SelectedPageEditor({
         ) : null}
         {viewMode === 'preview' || viewMode === 'split' ? (
           <div className="preview-pane">
-            <MarkdownPreview markdown={draftContent} />
+            <MarkdownPreview markdown={draftContent} onCheckboxToggle={handleCheckboxToggle} />
           </div>
         ) : null}
       </div>
@@ -214,6 +225,9 @@ export default function App() {
   const toggleMonospaceMode = useUiStore((state) => state.toggleMonospaceMode);
   const editorToolbarVisible = useUiStore((state) => state.editorToolbarVisible);
   const toggleEditorToolbar = useUiStore((state) => state.toggleEditorToolbar);
+  const sidebarOpen = useUiStore((state) => state.sidebarOpen);
+  const toggleSidebar = useUiStore((state) => state.toggleSidebar);
+  const setSidebarOpen = useUiStore((state) => state.setSidebarOpen);
 
   const selectedPage = useMemo(
     () => pages.find((page) => page.id === selectedPageId) ?? null,
@@ -461,6 +475,16 @@ export default function App() {
     setKeyboardShortcutsOpen(true);
     return true;
   }, []);
+
+  const handleSelectPage = useCallback(
+    (pageId: string) => {
+      selectPage(pageId);
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        setSidebarOpen(false);
+      }
+    },
+    [selectPage, setSidebarOpen],
+  );
 
   const handleCloseKeyboardShortcuts = useCallback(() => {
     setKeyboardShortcutsOpen(false);
@@ -828,7 +852,7 @@ export default function App() {
       pages={pages}
       selectedPageId={selectedPageId}
       expandedPageIds={expandedPageIds}
-      onSelect={selectPage}
+      onSelect={handleSelectPage}
       onToggleExpand={toggleExpanded}
       onCreateChild={(parentId) => {
         void createPage(parentId);
@@ -854,6 +878,27 @@ export default function App() {
 
   const toolbar = (
     <>
+      <button
+        type="button"
+        className="sidebar-toggle"
+        aria-label="Toggle sidebar"
+        onClick={toggleSidebar}
+      >
+        <svg
+          className="sidebar-toggle-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </button>
       <TopMenuBar title="Notes" menus={menus} />
       <input
         ref={importInputRef}
@@ -893,7 +938,13 @@ export default function App() {
 
   return (
     <>
-      <AppShell sidebar={sidebar} toolbar={toolbar} content={content} />
+      <AppShell
+        sidebar={sidebar}
+        toolbar={toolbar}
+        content={content}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={toggleSidebar}
+      />
       <KeyboardShortcutsModal isOpen={isKeyboardShortcutsOpen} onClose={handleCloseKeyboardShortcuts} />
     </>
   );

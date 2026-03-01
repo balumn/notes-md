@@ -69,9 +69,46 @@ function parseListLine(line: string): ParsedListLine | null {
 }
 
 const LIST_INDENT_UNIT = 4;
+const LIST_LINE_REGEX = /^\s*(\d+\.\s|[-*+]\s|-\s+\[[ xX]\]\s)/;
 
 function inferIndentUnit(_lines: string[]): number {
   return LIST_INDENT_UNIT;
+}
+
+/**
+ * Removes blank lines between list items. Lexical's markdown import treats
+ * blank lines as list boundaries, so "1. a\n\n2. b" becomes two separate lists
+ * and nested items lose their parent. Collapsing these blanks preserves nesting.
+ */
+export function collapseBlankLinesBetweenListItems(contentMd: string): string {
+  const lines = contentMd.split('\n');
+  let inFencedCodeBlock = false;
+  const result: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (FENCED_CODE_BLOCK_DELIMITER_REGEX.test(line)) {
+      inFencedCodeBlock = !inFencedCodeBlock;
+      result.push(line);
+      continue;
+    }
+    if (inFencedCodeBlock) {
+      result.push(line);
+      continue;
+    }
+    const isEmpty = line.trim() === '';
+    const prevLine = result[result.length - 1];
+    const prevIsListLine = prevLine !== undefined && LIST_LINE_REGEX.test(prevLine);
+    if (isEmpty && prevIsListLine) {
+      let j = i + 1;
+      while (j < lines.length && lines[j].trim() === '') j++;
+      if (j < lines.length && LIST_LINE_REGEX.test(lines[j])) {
+        continue;
+      }
+    }
+    result.push(line);
+  }
+  return result.join('\n');
 }
 
 function toIndentLevel(indentationWidth: number, indentUnit: number): number {
@@ -122,6 +159,89 @@ export function replaceLocalImageSources(
   }
 
   return result;
+}
+
+const TASK_LIST_LINE_REGEX = /^(\s*-\s+\[)([ xX])(\]\s*.*)$/;
+const STANDALONE_CHECKBOX_REGEX = /^(\s*)\[([ xX]?)\]\s*(.*)$/;
+
+/**
+ * Converts standalone checkboxes (`[]`, `[ ]`, `[x]`) to GFM task list format
+ * (`- [ ]`, `- [x]`) for rendering. Does not modify bullet-prefixed task lists.
+ * Skips conversion inside fenced code blocks.
+ */
+export function convertStandaloneCheckboxesForDisplay(contentMd: string): string {
+  const lines = contentMd.split('\n');
+  let inFencedCodeBlock = false;
+  const result: string[] = [];
+
+  for (const line of lines) {
+    if (FENCED_CODE_BLOCK_DELIMITER_REGEX.test(line)) {
+      inFencedCodeBlock = !inFencedCodeBlock;
+      result.push(line);
+      continue;
+    }
+    if (inFencedCodeBlock) {
+      result.push(line);
+      continue;
+    }
+
+    const match = STANDALONE_CHECKBOX_REGEX.exec(line);
+    if (!match) {
+      result.push(line);
+      continue;
+    }
+    const [, indent, checked, rest] = match;
+    const checkedChar = checked === 'x' || checked === 'X' ? 'x' : ' ';
+    result.push(`${indent}- [${checkedChar}] ${rest}`);
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * Toggles the checked state of the Nth task-list item (0-based) in the markdown.
+ * Handles both GFM format (`- [ ]`) and standalone format (`[]`, `[ ]`, `[x]`).
+ * Skips lines inside fenced code blocks. Returns the updated markdown, or null if invalid.
+ */
+export function toggleTaskListItem(contentMd: string, itemIndex: number): string | null {
+  const lines = contentMd.split('\n');
+  let currentIndex = 0;
+  let inFencedCodeBlock = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    if (FENCED_CODE_BLOCK_DELIMITER_REGEX.test(lines[i])) {
+      inFencedCodeBlock = !inFencedCodeBlock;
+      continue;
+    }
+    if (inFencedCodeBlock) {
+      continue;
+    }
+
+    const bulletMatch = TASK_LIST_LINE_REGEX.exec(lines[i]);
+    if (bulletMatch) {
+      if (currentIndex === itemIndex) {
+        const [, prefix, checked, suffix] = bulletMatch;
+        const newChecked = checked === ' ' || checked === '' ? 'x' : ' ';
+        lines[i] = `${prefix}${newChecked}${suffix}`;
+        return lines.join('\n');
+      }
+      currentIndex += 1;
+      continue;
+    }
+
+    const standaloneMatch = STANDALONE_CHECKBOX_REGEX.exec(lines[i]);
+    if (standaloneMatch && !lines[i].trimStart().startsWith('- ')) {
+      if (currentIndex === itemIndex) {
+        const [, indent, checked, rest] = standaloneMatch;
+        const newChecked = checked === 'x' || checked === 'X' ? ' ' : 'x';
+        lines[i] = `${indent}[${newChecked}] ${rest}`;
+        return lines.join('\n');
+      }
+      currentIndex += 1;
+    }
+  }
+
+  return null;
 }
 
 export function normalizeMarkdownListIndentation(contentMd: string): string {
