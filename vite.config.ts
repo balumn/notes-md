@@ -3,14 +3,15 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // base: '/notes-md/',
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['vite.svg'],
       manifest: {
-        name: 'Notes MD',
-        short_name: 'NotesMD',
+        name: 'Notes',
+        short_name: 'Notes',
         description: 'Local-first markdown notes with page hierarchy.',
         theme_color: '#f9fafb',
         background_color: '#f9fafb',
