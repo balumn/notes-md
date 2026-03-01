@@ -675,8 +675,43 @@ button.active {
   padding-left: 1.45rem;
 }
 
+.live-editor-content ul:has(li[role="checkbox"]) {
+  list-style: none;
+  padding-left: 0;
+}
+
 .live-editor-content li {
   margin: 0.18rem 0;
+}
+
+.live-editor-content li[role="checkbox"] {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.live-editor-content li[role="checkbox"]::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  border: 1px solid #9ca3af;
+  border-radius: 4px;
+  background: #fff;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.live-editor-content li[role="checkbox"][aria-checked="true"]::before {
+  content: '✓';
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
 }
 
 .live-editor-content blockquote {

@@ -1,4 +1,15 @@
-import { $convertFromMarkdownString, $convertToMarkdownString, TRANSFORMERS } from '@lexical/markdown';
+import {
+  $convertFromMarkdownString,
+  $convertToMarkdownString,
+  CHECK_LIST,
+  HEADING,
+  MULTILINE_ELEMENT_TRANSFORMERS,
+  ORDERED_LIST,
+  QUOTE,
+  TEXT_FORMAT_TRANSFORMERS,
+  TEXT_MATCH_TRANSFORMERS,
+  UNORDERED_LIST,
+} from '@lexical/markdown';
 import { TOGGLE_LINK_COMMAND, AutoLinkNode, LinkNode } from '@lexical/link';
 import {
   $createListNode,
@@ -17,6 +28,7 @@ import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
 import { EditorRefPlugin } from '@lexical/react/LexicalEditorRefPlugin';
+import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
@@ -45,8 +57,20 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import type { MarkdownEditorCommand, MarkdownEditorHandle } from './MarkdownEditor';
 import {
   collapseBlankLinesBetweenListItems,
+  convertStandaloneCheckboxesForDisplay,
   normalizeMarkdownListIndentation,
 } from '../../../domain/markdown';
+
+const MARKDOWN_TRANSFORMERS = [
+  HEADING,
+  QUOTE,
+  CHECK_LIST,
+  UNORDERED_LIST,
+  ORDERED_LIST,
+  ...MULTILINE_ELEMENT_TRANSFORMERS,
+  ...TEXT_FORMAT_TRANSFORMERS,
+  ...TEXT_MATCH_TRANSFORMERS,
+];
 
 interface LiveMarkdownEditorProps {
   value: string;
@@ -254,7 +278,10 @@ export const LiveMarkdownEditor = forwardRef<MarkdownEditorHandle, LiveMarkdownE
   function LiveMarkdownEditor({ value, onChange }: LiveMarkdownEditorProps, ref) {
     const lexicalEditorRef = useRef<LexicalEditor | null>(null);
     const normalizedInitialValue = useMemo(
-      () => collapseBlankLinesBetweenListItems(normalizeMarkdownListIndentation(value)),
+      () =>
+        collapseBlankLinesBetweenListItems(
+          convertStandaloneCheckboxesForDisplay(normalizeMarkdownListIndentation(value)),
+        ),
       [value],
     );
 
@@ -294,7 +321,7 @@ export const LiveMarkdownEditor = forwardRef<MarkdownEditorHandle, LiveMarkdownE
       () => ({
         namespace: 'notes-md-live-editor',
         editorState: () => {
-          $convertFromMarkdownString(normalizedInitialValue, TRANSFORMERS);
+          $convertFromMarkdownString(normalizedInitialValue, MARKDOWN_TRANSFORMERS);
         },
         nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, CodeNode, LinkNode, AutoLinkNode],
         onError: (error: Error) => {
@@ -307,7 +334,7 @@ export const LiveMarkdownEditor = forwardRef<MarkdownEditorHandle, LiveMarkdownE
     const handleChange = useCallback(
       (editorState: EditorState) => {
         editorState.read(() => {
-          const nextMarkdown = $convertToMarkdownString(TRANSFORMERS);
+          const nextMarkdown = $convertToMarkdownString(MARKDOWN_TRANSFORMERS);
           onChange(normalizeMarkdownListIndentation(nextMarkdown));
         });
       },
@@ -327,10 +354,11 @@ export const LiveMarkdownEditor = forwardRef<MarkdownEditorHandle, LiveMarkdownE
           />
           <HistoryPlugin />
           <ListPlugin />
+          <CheckListPlugin />
           <OrderedNestedListStartPlugin />
           <ListTabBehaviorPlugin />
           <LinkPlugin />
-          <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
+          <MarkdownShortcutPlugin transformers={MARKDOWN_TRANSFORMERS} />
           <OnChangePlugin ignoreSelectionChange onChange={handleChange} />
         </LexicalComposer>
       </div>
