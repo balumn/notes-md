@@ -1,73 +1,85 @@
-# React + TypeScript + Vite
+# Notes MD
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A local-first markdown notes app with a hierarchical page tree. Write, organize, and export your notes—all stored in your browser.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Markdown Editor
+- **Multiple view modes**: Edit (raw markdown), Preview (rendered), Split (side-by-side), and Live (WYSIWYG with Lexical)
+- **Rich formatting toolbar**: Bold, italic, strikethrough, underline, headings, lists, blockquotes, code blocks, links, tables
+- **Monospace toggle**: Switch between proportional and monospace fonts in edit mode
+- **Code blocks**: Syntax highlighting (highlight.js) with copy-to-clipboard
+- **GFM support**: GitHub Flavored Markdown including tables, task lists, and strikethrough
 
-## React Compiler
+### Images
+- **Paste & drop**: Paste images from clipboard or drag-and-drop into the editor
+- **Upload**: Insert images via toolbar button or keyboard shortcut
+- **Local storage**: Images stored in IndexedDB alongside your notes
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Page Tree
+- **Hierarchical organization**: Create nested pages with parent-child relationships
+- **Inline editing**: Rename pages directly in the tree
+- **Reordering**: Move pages up/down, indent (nest), and outdent
+- **Expand/collapse**: Navigate large trees with expand-all and collapse-all
+- **Context menu actions**: Create child, rename, delete, move from the tree
 
-## Expanding the ESLint configuration
+### Import & Export
+- **JSON backup**: Export full workspace (pages + images) as a single JSON file
+- **Import**: Restore from a previously exported JSON backup
+- **PDF export**: Export current page or entire workspace to PDF
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Keyboard Shortcuts
+- **File**: New page, import, export, PDF (Cmd/Ctrl+Opt+N, I, J, P)
+- **Edit**: Rename, delete, move, indent, outdent
+- **View**: Switch modes (Edit/Live/Split/Preview), monospace, toolbar toggle, expand/collapse
+- **Page tree**: Select previous/next page, expand/collapse selected, create child
+- **Editor**: Standard formatting (bold, italic, undo, redo, etc.)
+- **Help modal**: View all shortcuts (Cmd/Ctrl+Opt+/)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Technical
+- **Offline-first**: Data stored in IndexedDB via Dexie
+- **PWA-ready**: Built with Vite PWA plugin for installable app support
+- **No backend**: Everything runs in the browser
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Getting Started
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Install dependencies
+npm install
+
+# Start dev server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm preview
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Tech Stack
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **React 19** + **TypeScript** + **Vite 7**
+- **Lexical** – rich text / live markdown editing
+- **CodeMirror** – raw markdown editing
+- **Dexie** – IndexedDB wrapper
+- **Zustand** – state management
+- **react-markdown** + **remark-gfm** + **rehype-highlight** – markdown rendering
+- **html2pdf.js** – PDF export
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Project Structure
+
+```
+src/
+├── app/              # App shell, layout, menu bar
+├── domain/           # Models, constants, markdown utilities
+├── features/
+│   ├── editor/       # Markdown editor, toolbar, preview, live editor
+│   ├── help/         # Keyboard shortcuts modal
+│   ├── import-export/# JSON and PDF export/import
+│   ├── pages/        # Page tree components
+│   ├── pdf/          # PDF export service
+│   └── shortcuts/    # Global shortcut handling
+├── lib/db/           # Dexie schema, repositories
+└── store/            # Zustand stores (notes, UI)
 ```
