@@ -453,7 +453,7 @@ export default function App() {
   }, [setExpandedPageIds]);
 
   const handleShowAbout = useCallback((): boolean => {
-    window.alert('Notes MD\nUse File, Edit, and View menus for actions.');
+    window.alert('Notes \nUse File, Edit, and View menus for actions.');
     return true;
   }, []);
 
@@ -854,7 +854,7 @@ export default function App() {
 
   const toolbar = (
     <>
-      <TopMenuBar title="Notes MD" menus={menus} />
+      <TopMenuBar title="Notes" menus={menus} />
       <input
         ref={importInputRef}
         type="file"
