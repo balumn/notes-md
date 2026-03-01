@@ -68,15 +68,6 @@ function parseListLine(line: string): ParsedListLine | null {
   return null;
 }
 
-function getListLineIndentationWidth(line: string): number | null {
-  const parsedLine = parseListLine(line);
-  if (!parsedLine) {
-    return null;
-  }
-
-  return getIndentWidth(parsedLine.indentation);
-}
-
 const LIST_INDENT_UNIT = 4;
 
 function inferIndentUnit(_lines: string[]): number {
