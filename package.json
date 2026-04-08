@@ -20,6 +20,7 @@
     "@lexical/markdown": "^0.41.0",
     "@lexical/react": "^0.41.0",
     "@lexical/rich-text": "^0.41.0",
+    "@lexical/table": "^0.41.0",
     "@uiw/react-codemirror": "^4.25.5",
     "dexie": "^4.3.0",
     "highlight.js": "^11.11.1",

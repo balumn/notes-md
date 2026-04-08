@@ -50,12 +50,27 @@ button.active {
   display: grid;
   grid-template-columns: 340px 1fr;
   height: 100%;
+  transition: grid-template-columns 0.2s ease;
 }
 
 .app-sidebar {
   border-right: 1px solid #e5e7eb;
   overflow: auto;
   background: #fff;
+  min-width: 0;
+}
+
+@media (min-width: 769px) {
+  .app-shell[data-sidebar-open='false'] {
+    grid-template-columns: 0 1fr;
+  }
+
+  .app-shell[data-sidebar-open='false'] .app-sidebar {
+    overflow: hidden;
+    border-right: none;
+    pointer-events: none;
+    visibility: hidden;
+  }
 }
 
 .app-main {
@@ -680,6 +695,18 @@ button.active {
   padding-left: 0;
 }
 
+/* Nested checklist: more vertical space before first nested item */
+.live-editor-content ul ul:has(li[role="checkbox"]) {
+  margin-top: 0.5rem;
+  margin-left: -0.25rem;
+  padding-left: 0.75rem;
+}
+
+/* Nested checklist items: match top-level line spacing */
+.live-editor-content ul ul li[role="checkbox"] {
+  margin: 0.35rem 0;
+}
+
 .live-editor-content li {
   margin: 0.18rem 0;
 }
@@ -732,6 +759,95 @@ button.active {
 
 .live-editor-content a {
   color: #2563eb;
+}
+
+.live-editor-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+
+.live-editor-content th,
+.live-editor-content td {
+  border: 1px solid #d1d5db;
+  padding: 6px;
+  min-height: 2em;
+  cursor: text;
+  vertical-align: top;
+}
+
+.table-context-menu {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
+  padding: 4px 0;
+}
+
+.table-context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #374151;
+}
+
+.table-context-menu-item:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.table-context-menu-item:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.table-context-menu-separator {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 4px 0;
+}
+
+.table-hover-button {
+  position: absolute;
+  pointer-events: none;
+}
+
+.table-hover-button .table-hover-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  color: #374151;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.table-hover-button .table-hover-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.table-hover-button .table-hover-btn-delete:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.table-hover-button .table-hover-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .live-editor-placeholder {

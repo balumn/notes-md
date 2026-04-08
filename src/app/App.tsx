@@ -882,6 +882,7 @@ export default function App() {
         type="button"
         className="sidebar-toggle"
         aria-label="Toggle sidebar"
+        aria-expanded={sidebarOpen}
         onClick={toggleSidebar}
       >
         <svg
