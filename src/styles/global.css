@@ -748,6 +748,33 @@ button.active {
   color: #4b5563;
 }
 
+/* Lexical CodeNode renders <code class="live-editor-block-code">, not <pre> */
+.live-editor-content .live-editor-block-code {
+  display: block;
+  margin: 12px 0;
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 8px;
+  padding: 10px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: 0.88em;
+  line-height: 1.5;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.live-editor-content .live-editor-inline-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: 0.88em;
+  background: #f1f5f9;
+  padding: 0.12em 0.38em;
+  border-radius: 4px;
+  color: #0f172a;
+}
+
 .live-editor-content pre {
   margin: 12px 0;
   background: #111827;
