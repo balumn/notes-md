@@ -9,8 +9,10 @@ import {
   TEXT_FORMAT_TRANSFORMERS,
   TEXT_MATCH_TRANSFORMERS,
   UNORDERED_LIST,
+  type ElementTransformer,
 } from '@lexical/markdown';
 import { TOGGLE_LINK_COMMAND, AutoLinkNode, LinkNode } from '@lexical/link';
+import { INSERT_TABLE_COMMAND, TableCellNode, TableNode, TableRowNode } from '@lexical/table';
 import {
   $createListNode,
   $isListItemNode,
@@ -36,6 +38,7 @@ import { ListPlugin } from '@lexical/react/LexicalListPlugin';
 import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
+import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
 import {
   COMMAND_PRIORITY_EDITOR,
   $createParagraphNode,
@@ -55,15 +58,111 @@ import {
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 
 import type { MarkdownEditorCommand, MarkdownEditorHandle } from './MarkdownEditor';
+
+// #region agent log
+function logNestedChecklistStyles() {
+  const root = document.querySelector('.live-editor-content');
+  if (!root) return;
+  const nestedUls = root.querySelectorAll('ul ul');
+  nestedUls.forEach((ul) => {
+    const hasCheckbox = ul.querySelector('li[role="checkbox"]');
+    if (!hasCheckbox) return;
+    const s = getComputedStyle(ul);
+    const parentLi = ul.closest('li');
+    const parentLiStyles = parentLi ? getComputedStyle(parentLi) : null;
+    const firstNestedLi = ul.querySelector('li[role="checkbox"]');
+    const firstLiStyles = firstNestedLi ? getComputedStyle(firstNestedLi) : null;
+    const parentUl = ul.parentElement?.closest('ul');
+    const parentUlStyles = parentUl ? getComputedStyle(parentUl) : null;
+    const rootRect = (root as HTMLElement).getBoundingClientRect();
+    const nestedRect = (ul as HTMLElement).getBoundingClientRect();
+    const topLevelLi = root.querySelector('ul > li[role="checkbox"]');
+    const topLevelRect = topLevelLi?.getBoundingClientRect();
+    const indentFromRoot = nestedRect.left - rootRect.left;
+    const topLevelIndent = topLevelRect ? topLevelRect.left - rootRect.left : null;
+    const payload = {
+      hypothesisId: 'A',
+      indentFromRootPx: Math.round(indentFromRoot),
+      topLevelIndentPx: topLevelIndent != null ? Math.round(topLevelIndent) : null,
+      nestedUl: {
+        marginLeft: s.marginLeft,
+        marginTop: s.marginTop,
+        paddingLeft: s.paddingLeft,
+        display: s.display,
+        offsetLeft: (ul as HTMLElement).offsetLeft,
+        offsetParentTag: (ul as HTMLElement).offsetParent?.tagName,
+      },
+      parentUl: parentUlStyles
+        ? { paddingLeft: parentUlStyles.paddingLeft, marginLeft: parentUlStyles.marginLeft }
+        : null,
+      parentLi: parentLi
+        ? {
+            display: parentLiStyles?.display,
+            flexDirection: parentLiStyles?.flexDirection,
+            gap: parentLiStyles?.gap,
+            paddingLeft: parentLiStyles?.paddingLeft,
+          }
+        : null,
+      firstNestedLi: firstLiStyles
+        ? { marginTop: firstLiStyles.marginTop, marginBottom: firstLiStyles.marginBottom }
+        : null,
+    };
+    fetch('http://127.0.0.1:7915/ingest/a6c5168c-344b-4a88-b312-581586ee6bac', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '12b1c7' },
+      body: JSON.stringify({
+        sessionId: '12b1c7',
+        location: 'LiveMarkdownEditor.tsx:logNestedChecklistStyles',
+        message: 'Nested checklist computed styles',
+        data: payload,
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  });
+}
+// #endregion
+
+function NestedChecklistDebugPlugin() {
+  const [editor] = useLexicalComposerContext();
+  useEffect(() => {
+    return editor.registerUpdateListener(() => {
+      requestAnimationFrame(() => {
+        setTimeout(logNestedChecklistStyles, 50);
+      });
+    });
+  }, [editor]);
+  return null;
+}
+
+import { TABLE } from '../transformers/tableMarkdownTransformer';
+import { TableContextMenuPlugin } from '../plugins/TableContextMenuPlugin';
+import { TableHoverButtonsPlugin } from '../plugins/TableHoverButtonsPlugin';
 import {
   collapseBlankLinesBetweenListItems,
   convertStandaloneCheckboxesForDisplay,
   normalizeMarkdownListIndentation,
 } from '../../../domain/markdown';
 
+/** In live mode, triple dash creates a new line (paragraph) instead of a horizontal rule. */
+const TRIPLE_DASH_AS_NEWLINE: ElementTransformer = {
+  dependencies: [],
+  export: () => null,
+  regExp: /^---\s?$/,
+  replace: (parentNode, _children, _match, isImport) => {
+    const paragraph = $createParagraphNode();
+    parentNode.replace(paragraph);
+    if (!isImport) {
+      paragraph.select(0, 0);
+    }
+  },
+  type: 'element',
+};
+
 const MARKDOWN_TRANSFORMERS = [
   HEADING,
   QUOTE,
+  TRIPLE_DASH_AS_NEWLINE,
+  TABLE,
   CHECK_LIST,
   UNORDERED_LIST,
   ORDERED_LIST,
@@ -259,14 +358,15 @@ function runLiveMarkdownCommand(editor: LexicalEditor, command: MarkdownEditorCo
     case 'codeBlock':
       return applyBlockType(editor, () => $createCodeNode());
     case 'horizontalRule':
-      return insertMarkdownSnippet(editor, '\n---\n');
+      return insertMarkdownSnippet(editor, '\n\n');
     case 'link':
       return editor.dispatchCommand(TOGGLE_LINK_COMMAND, 'https://example.com');
     case 'table':
-      return insertMarkdownSnippet(
-        editor,
-        '\n| Column 1 | Column 2 |\n| --- | --- |\n| Value 1 | Value 2 |\n',
-      );
+      return editor.dispatchCommand(INSERT_TABLE_COMMAND, {
+        columns: '2',
+        rows: '3',
+        includeHeaders: true,
+      });
     case 'imageTemplate':
       return insertMarkdownSnippet(editor, '![alt text](https://example.com/image.png)');
     default:
@@ -323,7 +423,18 @@ export const LiveMarkdownEditor = forwardRef<MarkdownEditorHandle, LiveMarkdownE
         editorState: () => {
           $convertFromMarkdownString(normalizedInitialValue, MARKDOWN_TRANSFORMERS);
         },
-        nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, CodeNode, LinkNode, AutoLinkNode],
+        nodes: [
+          HeadingNode,
+          QuoteNode,
+          ListNode,
+          ListItemNode,
+          CodeNode,
+          LinkNode,
+          AutoLinkNode,
+          TableNode,
+          TableRowNode,
+          TableCellNode,
+        ],
         onError: (error: Error) => {
           throw error;
         },
@@ -358,7 +469,11 @@ export const LiveMarkdownEditor = forwardRef<MarkdownEditorHandle, LiveMarkdownE
           <OrderedNestedListStartPlugin />
           <ListTabBehaviorPlugin />
           <LinkPlugin />
+          <TablePlugin />
+          <TableContextMenuPlugin />
+          <TableHoverButtonsPlugin />
           <MarkdownShortcutPlugin transformers={MARKDOWN_TRANSFORMERS} />
+          <NestedChecklistDebugPlugin />
           <OnChangePlugin ignoreSelectionChange onChange={handleChange} />
         </LexicalComposer>
       </div>
