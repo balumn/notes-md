@@ -143,6 +143,14 @@ import {
   normalizeMarkdownListIndentation,
 } from '../../../domain/markdown';
 
+/** Theme classes: block {@link CodeNode} uses `code`; inline code uses `text.code` on the inner span. */
+const LIVE_EDITOR_THEME = {
+  code: 'live-editor-block-code',
+  text: {
+    code: 'live-editor-inline-code',
+  },
+};
+
 /** In live mode, triple dash creates a new line (paragraph) instead of a horizontal rule. */
 const TRIPLE_DASH_AS_NEWLINE: ElementTransformer = {
   dependencies: [],
@@ -420,6 +428,7 @@ export const LiveMarkdownEditor = forwardRef<MarkdownEditorHandle, LiveMarkdownE
     const initialConfig = useMemo(
       () => ({
         namespace: 'notes-md-live-editor',
+        theme: LIVE_EDITOR_THEME,
         editorState: () => {
           $convertFromMarkdownString(normalizedInitialValue, MARKDOWN_TRANSFORMERS);
         },
